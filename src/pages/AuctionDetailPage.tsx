@@ -15,7 +15,7 @@ import { type Address } from "viem"
 import { useAccount, usePublicClient } from "wagmi"
 import { ArrowLeft, Clock, RefreshCw, TrendingUp, Users } from "lucide-react"
 import { useCCAAuction, useCCABids, useCCACheckpoints, useExitBid, useClaimTokens } from "../hooks/useCCA"
-import type { CCACheckpoint } from "../hooks/useCCA"
+import type { CCACheckpoint, CCABid } from "../hooks/useCCA"
 import { ccaAbi } from "../abi/cca"
 import { q96ToPrice, formatWei } from "../lib/q96"
 import { BidRow } from "../components/clearing/BidRow"
@@ -202,14 +202,13 @@ export function AuctionDetailPage() {
             h="10"
             rounded="full"
             bg="brand.100"
-            _dark={{ bg: "brand.900" }}
+            _dark={{ bg: "brand.900", color: "brand.300" }}
             align="center"
             justify="center"
             fontWeight="bold"
             fontFamily="mono"
             fontSize="sm"
             color="brand.700"
-            _darkColor="brand.300"
           >
             {auction.tokenSymbol.substring(0, 2)}
           </Flex>

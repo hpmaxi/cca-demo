@@ -73,9 +73,8 @@ export function ClearingBlock({ checkpoint, bids, userAddress, isLatest }: Props
       rounded="lg"
       borderWidth="1px"
       borderColor={isLatest ? "brand.300" : "border.muted"}
-      _dark={{ borderColor: isLatest ? "brand.700" : "border.muted" }}
+      _dark={{ borderColor: isLatest ? "brand.700" : "border.muted", bg: isLatest ? "brand.950" : "bg" }}
       bg={isLatest ? "brand.50" : "bg"}
-      _darkBg={isLatest ? "brand.950" : "bg"}
       css={isLatest ? {
         animation: "slideIn 0.4s ease-out",
         "@keyframes slideIn": {

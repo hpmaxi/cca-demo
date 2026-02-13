@@ -99,7 +99,7 @@ export function DashboardPage() {
           </Card.Header>
           <Card.Body pt="0">
             <Text fontSize="2xl" fontWeight="bold" fontFamily="mono">
-              {balance ? `${parseFloat(balance.formatted).toFixed(4)} ETH` : "—"}
+              {balance ? `${(Number(balance.value) / 10 ** balance.decimals).toFixed(4)} ETH` : "—"}
             </Text>
             <Text fontSize="xs" color="fg.muted" mt="1">
               {isConnected ? "Available for bidding" : "Connect wallet to see balance"}

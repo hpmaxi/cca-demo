@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Heading, HStack, SimpleGrid, Text, VStack } from "@chakra-ui/react"
 import { Link } from "react-router"
-import { ArrowRight, CheckCircle, Zap, Shield, BarChart3, Rocket } from "lucide-react"
+import { ArrowRight, CheckCircle, Zap, Shield, BarChart3 } from "lucide-react"
 
 const features = [
   "Fair launch mechanism with transparent on-chain clearing",

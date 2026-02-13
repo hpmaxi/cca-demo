@@ -1,4 +1,4 @@
-import { Box, Button, Input, Text, VStack } from "@chakra-ui/react"
+import { Button, Input, Text, VStack } from "@chakra-ui/react"
 import { Field } from "../ui/field"
 import { Wallet } from "lucide-react"
 import { useAccount } from "wagmi"

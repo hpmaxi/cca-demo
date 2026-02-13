@@ -2,8 +2,6 @@ import {
   Badge,
   Box,
   Card,
-  Grid,
-  GridItem,
   HStack,
   SimpleGrid,
   Text,

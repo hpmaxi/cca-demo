@@ -18,7 +18,7 @@ import { type Address } from "viem"
 import { ccaAbi } from "../abi/cca"
 import { erc20Abi } from "../abi/erc20"
 import { ccaFactoryAbi, CCA_FACTORY_ADDRESS } from "../abi/ccaFactory"
-import { q96ToPrice, formatWei } from "../lib/q96"
+import { q96ToPrice } from "../lib/q96"
 import { toaster } from "../components/ui/toaster"
 import { useExitBid, useClaimTokens } from "../hooks/useCCA"
 
@@ -125,8 +125,8 @@ export function MyBidsPage() {
     fetchBids()
   }, [fetchBids])
 
-  const { exitBid, isPending: exitPending } = useExitBid(selectedAuction)
-  const { claimTokens, isPending: claimPending } = useClaimTokens(selectedAuction)
+  const { exitBid, isPending: _exitPending } = useExitBid(selectedAuction)
+  const { claimTokens, isPending: _claimPending } = useClaimTokens(selectedAuction)
 
   const handleExit = async (bid: UserBid) => {
     setSelectedAuction(bid.auctionAddress)
