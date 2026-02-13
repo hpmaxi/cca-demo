@@ -24,7 +24,7 @@ import type { GatekeepMode } from "../mock/types"
 import { useNavigate } from "react-router"
 import { Check, ChevronLeft, ChevronRight, Loader2, Rocket } from "lucide-react"
 import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi"
-import { type Address, parseEther, parseUnits, zeroAddress, encodeAbiParameters, keccak256, toHex } from "viem"
+import { type Address, parseEther, parseUnits, zeroAddress, encodeAbiParameters, keccak256, toHex, type AbiParameter } from "viem"
 import { liquidityLauncherAbi, LIQUIDITY_LAUNCHER, UERC20_FACTORY, UERC20_SUPPORTED_CHAIN_IDS } from "../abi/liquidityLauncher"
 import { CCA_FACTORY_ADDRESS } from "../abi/ccaFactory"
 import { priceToQ96 } from "../lib/q96"
@@ -37,6 +37,33 @@ const steps = [
   { label: "Recipients", description: "Fund destinations" },
   { label: "Review", description: "Confirm and deploy" },
 ]
+
+/**
+ * Encode UERC20Metadata struct for the UERC20Factory.
+ *
+ * The factory's createToken expects its `data` parameter to be an ABI-encoded
+ * UERC20Metadata struct: (string description, string website, string image).
+ * Passing empty bytes (0x) causes the factory to revert because abi.decode fails.
+ */
+function encodeUERC20Metadata(
+  description = "",
+  website = "",
+  image = "",
+): `0x${string}` {
+  return encodeAbiParameters(
+    [
+      {
+        type: "tuple",
+        components: [
+          { type: "string", name: "description" },
+          { type: "string", name: "website" },
+          { type: "string", name: "image" },
+        ],
+      },
+    ] as readonly AbiParameter[],
+    [{ description, website, image }],
+  )
+}
 
 /**
  * Encode release schedule segments into packed 8-byte entries for CCA.
@@ -228,7 +255,7 @@ export function CreateAuctionPage() {
           decimals,
           totalSupplyWei,
           LIQUIDITY_LAUNCHER, // Mint to launcher for atomic flow
-          "0x" as `0x${string}`,
+          encodeUERC20Metadata(), // ABI-encoded UERC20Metadata (empty strings are fine)
         ],
       })
 

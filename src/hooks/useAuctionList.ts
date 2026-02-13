@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
-import { usePublicClient } from "wagmi"
+import { usePublicClient, useChainId } from "wagmi"
 import { type Address } from "viem"
-import { ccaFactoryAbi, CCA_FACTORY_ADDRESS } from "../abi/ccaFactory"
+import { ccaFactoryAbi, CCA_FACTORY_ADDRESS, CCA_FACTORY_DEPLOY_BLOCK } from "../abi/ccaFactory"
 import { ccaAbi } from "../abi/cca"
 import { erc20Abi } from "../abi/erc20"
 import { q96ToPrice } from "../lib/q96"
@@ -22,6 +22,7 @@ export interface AuctionListItem {
 
 export function useAuctionList() {
   const client = usePublicClient()
+  const chainId = useChainId()
   const [auctions, setAuctions] = useState<AuctionListItem[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -29,11 +30,12 @@ export function useAuctionList() {
     if (!client) return
     setLoading(true)
     try {
+      const fromBlock = CCA_FACTORY_DEPLOY_BLOCK[chainId] ?? 0n
       const logs = await client.getContractEvents({
         address: CCA_FACTORY_ADDRESS,
         abi: ccaFactoryAbi,
         eventName: "AuctionCreated",
-        fromBlock: 0n,
+        fromBlock,
       })
 
       const currentBlock = await client.getBlockNumber()
@@ -84,7 +86,7 @@ export function useAuctionList() {
     } finally {
       setLoading(false)
     }
-  }, [client])
+  }, [client, chainId])
 
   useEffect(() => {
     fetchAuctions()
