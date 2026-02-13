@@ -265,17 +265,26 @@ export function CreateAuctionPage() {
       })
 
       // Parse TokenCreated event to get token address
-      // TokenCreated(address indexed token) — topic[0] = sig, topic[1] = address
+      // Two TokenCreated logs are emitted: one from UERC20Factory (token in data, no topics[1])
+      // and one from LiquidityLauncher (token indexed in topics[1]).
+      // We need the LiquidityLauncher log which has topics[1].
       const tokenCreatedSig = keccak256(toHex("TokenCreated(address)"))
       const tokenLog = createReceipt.logs.find(
-        (log) => log.topics[0] === tokenCreatedSig,
+        (log) => log.topics[0] === tokenCreatedSig && log.topics.length > 1,
       )
       let tokenAddress: Address
       if (tokenLog?.topics[1]) {
         tokenAddress = `0x${tokenLog.topics[1].slice(26)}` as Address
       } else {
-        // Fallback: look at all logs for the first Transfer(0x0, ...) which indicates minting
-        throw new Error("Could not find TokenCreated event in receipt. Token deployment may have failed.")
+        // Fallback: try the factory log where token address is in data
+        const factoryLog = createReceipt.logs.find(
+          (log) => log.topics[0] === tokenCreatedSig && log.data.length >= 66,
+        )
+        if (factoryLog) {
+          tokenAddress = `0x${factoryLog.data.slice(26, 66)}` as Address
+        } else {
+          throw new Error("Could not find TokenCreated event in receipt. Token deployment may have failed.")
+        }
       }
 
       toaster.create({
