@@ -23,9 +23,9 @@ import { ReviewStep } from "../components/create/ReviewStep"
 import type { GatekeepMode } from "../mock/types"
 import { useNavigate } from "react-router"
 import { Check, ChevronLeft, ChevronRight, Loader2, Rocket } from "lucide-react"
-import { useAccount, usePublicClient, useWriteContract } from "wagmi"
+import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi"
 import { type Address, parseEther, parseUnits, zeroAddress, encodeAbiParameters, keccak256, toHex } from "viem"
-import { liquidityLauncherAbi, LIQUIDITY_LAUNCHER, UERC20_FACTORY } from "../abi/liquidityLauncher"
+import { liquidityLauncherAbi, LIQUIDITY_LAUNCHER, UERC20_FACTORY, UERC20_SUPPORTED_CHAIN_IDS } from "../abi/liquidityLauncher"
 import { CCA_FACTORY_ADDRESS } from "../abi/ccaFactory"
 import { priceToQ96 } from "../lib/q96"
 
@@ -130,8 +130,10 @@ function encodeAuctionParams(args: {
 export function CreateAuctionPage() {
   const navigate = useNavigate()
   const { address: userAddress } = useAccount()
+  const chainId = useChainId()
   const publicClient = usePublicClient()
   const { writeContractAsync } = useWriteContract()
+  const chainSupported = UERC20_SUPPORTED_CHAIN_IDS.has(chainId)
   const [step, setStep] = useState(0)
   const [deploying, setDeploying] = useState(false)
   const [deployStatus, setDeployStatus] = useState("")
@@ -179,6 +181,7 @@ export function CreateAuctionPage() {
   const validate = (): string | null => {
     if (!userAddress) return "Connect your wallet first"
     if (!publicClient) return "No RPC connection"
+    if (!chainSupported) return "Switch to Sepolia or Ethereum Mainnet — token creation is only available on those networks"
     if (!tokenDetails.name.trim()) return "Token name is required"
     if (!tokenDetails.symbol.trim()) return "Token symbol is required"
     if (!tokenDetails.totalSupply || parseFloat(tokenDetails.totalSupply) <= 0) return "Total supply must be > 0"
@@ -382,6 +385,14 @@ export function CreateAuctionPage() {
         </Text>
       </VStack>
 
+      {!chainSupported && (
+        <Box mb="4" px="4" py="3" rounded="md" bg="orange.subtle">
+          <Text fontSize="sm" color="orange.fg" fontWeight="medium">
+            Token creation requires Sepolia or Ethereum Mainnet. Switch your wallet network to continue.
+          </Text>
+        </Box>
+      )}
+
       <Flex gap="8">
         {/* Sidebar Stepper */}
         <VStack
@@ -547,7 +558,7 @@ export function CreateAuctionPage() {
                         colorPalette="brand"
                         onClick={handleDeploy}
                         loading={deploying}
-                        disabled={!userAddress}
+                        disabled={!userAddress || !chainSupported}
                       >
                         <Rocket size={16} />
                         {deploying ? "Deploying..." : "Deploy Auction"}

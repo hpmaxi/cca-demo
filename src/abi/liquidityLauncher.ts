@@ -57,5 +57,15 @@ export const liquidityLauncherAbi = [
   },
 ] as const
 
+/**
+ * Contract addresses — verified from https://docs.uniswap.org/contracts/liquidity-launchpad/Deployments
+ *
+ * LiquidityLauncher: all compatible chains (same address)
+ * UERC20Factory: Mainnet + Sepolia only
+ * CCA Factory (in ccaFactory.ts): Mainnet, Sepolia, Base, Arbitrum, Unichain
+ */
 export const LIQUIDITY_LAUNCHER = "0x00000008412db3394C91A5CbD01635c6d140637C" as const
 export const UERC20_FACTORY = "0x0cde87c11b959e5eb0924c1abf5250ee3f9bd1b5" as const
+
+/** Chains where UERC20Factory is deployed (token creation works) */
+export const UERC20_SUPPORTED_CHAIN_IDS: Set<number> = new Set([1, 11155111]) // mainnet, sepolia
