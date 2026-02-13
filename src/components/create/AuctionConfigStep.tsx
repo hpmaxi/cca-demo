@@ -4,8 +4,8 @@ import {
   NativeSelectField,
   NativeSelectRoot,
 } from "../ui/native-select"
-import { blocksToTime } from "../../lib/format"
-import { useBlockNumber } from "wagmi"
+import { blocksToTime, getBlockTime } from "../../lib/format"
+import { useBlockNumber, useChainId } from "wagmi"
 import { AlertTriangle } from "lucide-react"
 
 interface AuctionConfig {
@@ -26,6 +26,8 @@ interface Props {
 
 export function AuctionConfigStep({ data, onChange }: Props) {
   const { data: currentBlock } = useBlockNumber({ watch: true })
+  const chainId = useChainId()
+  const blockTimeSec = getBlockTime(chainId)
 
   const update = (field: keyof AuctionConfig, value: string) => {
     onChange({ ...data, [field]: value })
@@ -73,7 +75,7 @@ export function AuctionConfigStep({ data, onChange }: Props) {
       <Field
         label="Floor Price (ETH)"
         required
-        helperText="Minimum price per token in ETH. Bids below this price are rejected."
+        helperText={`Minimum price per token in ETH. Bids below this price are rejected.`}
         invalid={floorInvalid}
         errorText="Floor price must be a positive number"
       >
@@ -97,7 +99,7 @@ export function AuctionConfigStep({ data, onChange }: Props) {
       <Field
         label="Start Block"
         required
-        helperText={`Must be >= current block (${currentBlockNum.toLocaleString()}). Each block is ~12 seconds.`}
+        helperText={`Must be >= current block (${currentBlockNum.toLocaleString()}). Each block is ~${blockTimeSec}s.`}
         invalid={startInvalid}
         errorText={`Start block must be >= current block (${currentBlockNum.toLocaleString()})`}
       >
@@ -111,7 +113,7 @@ export function AuctionConfigStep({ data, onChange }: Props) {
       <Field
         label="End Block"
         required
-        helperText="Must be greater than start block. Each block is ~12 seconds."
+        helperText={`Must be greater than start block. Each block is ~${blockTimeSec}s.`}
         invalid={endInvalid}
         errorText="End block must be greater than start block"
       >
@@ -125,7 +127,7 @@ export function AuctionConfigStep({ data, onChange }: Props) {
       {durationBlocks !== null && (
         <Box px="3" py="2" rounded="md" bg="bg.muted" fontSize="sm">
           <Text color="fg.muted">
-            Duration: <Text as="span" fontWeight="bold" color="fg">{blocksToTime(durationBlocks)}</Text>{" "}
+            Duration: <Text as="span" fontWeight="bold" color="fg">{blocksToTime(durationBlocks, blockTimeSec)}</Text>{" "}
             ({durationBlocks.toLocaleString()} blocks)
           </Text>
         </Box>

@@ -12,27 +12,22 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { type Address } from "viem"
-import { useAccount, usePublicClient } from "wagmi"
+import { useAccount, useChainId, usePublicClient } from "wagmi"
 import { ArrowLeft, Clock, RefreshCw, TrendingUp, Users } from "lucide-react"
 import { useCCAAuction, useCCABids, useCCACheckpoints, useExitBid, useClaimTokens } from "../hooks/useCCA"
 import type { CCACheckpoint, CCABid } from "../hooks/useCCA"
 import { ccaAbi } from "../abi/cca"
 import { q96ToPrice, formatWei } from "../lib/q96"
+import { blocksToTime, getBlockTime } from "../lib/format"
 import { BidRow } from "../components/clearing/BidRow"
 import { ClearingTimeline } from "../components/clearing/ClearingTimeline"
 import { toaster } from "../components/ui/toaster"
 
-function blocksToTime(blocks: number): string {
-  const seconds = blocks * 12
-  if (seconds < 60) return `${seconds}s`
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`
-  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`
-  return `${Math.round(seconds / 86400)}d`
-}
-
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { address: userAddress } = useAccount()
+  const chainId = useChainId()
+  const blockTime = getBlockTime(chainId)
   const auctionAddress = id as Address | undefined
 
   const { auction, isLoading, currentBlock } = useCCAAuction(auctionAddress)
@@ -281,9 +276,9 @@ export function AuctionDetailPage() {
             </HStack>
             <Text fontSize="lg" fontWeight="bold" fontFamily="mono">
               {auction.isLive
-                ? `~${blocksToTime(blocksRemaining)}`
+                ? `~${blocksToTime(blocksRemaining, blockTime)}`
                 : auction.isUpcoming
-                  ? `~${blocksToTime(Number(auction.startBlock - currentBlock))}`
+                  ? `~${blocksToTime(Number(auction.startBlock - currentBlock), blockTime)}`
                   : "—"}
             </Text>
           </Card.Body>

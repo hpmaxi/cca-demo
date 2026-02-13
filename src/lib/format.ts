@@ -1,11 +1,24 @@
+import { base } from "wagmi/chains"
+
 export const MOCK_ETH_PRICE_USD = 3000
 
+/** Block time in seconds per chain. Base = 2s, everything else defaults to 12s. */
+const BLOCK_TIMES: Record<number, number> = {
+  [base.id]: 2,
+}
+
+/** Get block time in seconds for a given chain ID. */
+export function getBlockTime(chainId?: number): number {
+  if (!chainId) return 12
+  return BLOCK_TIMES[chainId] ?? 12
+}
+
 /**
- * Convert a number of Ethereum blocks to a human-readable time string.
- * Each block is ~12 seconds.
+ * Convert a number of blocks to a human-readable time string.
+ * @param blockTimeSec — seconds per block (default 12 for Ethereum L1, 2 for Base)
  */
-export function blocksToTime(blocks: number): string {
-  const seconds = blocks * 12
+export function blocksToTime(blocks: number, blockTimeSec: number = 12): string {
+  const seconds = blocks * blockTimeSec
   const minutes = seconds / 60
   const hours = minutes / 60
   const days = hours / 24
@@ -60,10 +73,11 @@ export function truncateAddress(addr: string): string {
 export function blockToRelativeTime(
   targetBlock: number,
   currentBlock: number,
+  blockTimeSec: number = 12,
 ): string {
   const diff = targetBlock - currentBlock
   const absDiff = Math.abs(diff)
-  const timeStr = blocksToTime(absDiff)
+  const timeStr = blocksToTime(absDiff, blockTimeSec)
 
   if (diff > 0) return `${timeStr} remaining`
   if (diff < 0) return `${timeStr} ago`
