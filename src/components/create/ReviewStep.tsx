@@ -1,5 +1,5 @@
 import { Badge, Box, Card, Flex, HStack, Text, VStack } from "@chakra-ui/react"
-import type { ScheduleSegment } from "./ReleaseScheduleStep"
+import { type ScheduleSegment, computeBlockDeltas } from "./ReleaseScheduleStep"
 import type { GatekeepMode } from "../../mock/types"
 import { blocksToTime } from "../../lib/format"
 import { glossary } from "../../lib/glossary"
@@ -35,7 +35,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
         {label}
       </Text>
       <Text fontSize="sm" fontWeight="medium" textAlign="right" maxW="60%">
-        {value || "—"}
+        {value || "\u2014"}
       </Text>
     </Flex>
   )
@@ -46,6 +46,10 @@ export function ReviewStep({ data }: { data: ReviewData }) {
   const endNum = parseInt(data.auctionConfig.endBlock)
   const durationBlocks = !isNaN(startNum) && !isNaN(endNum) && endNum > startNum
     ? endNum - startNum
+    : null
+
+  const blockDeltas = durationBlocks
+    ? computeBlockDeltas(data.releaseSchedule, durationBlocks)
     : null
 
   return (
@@ -85,10 +89,14 @@ export function ReviewStep({ data }: { data: ReviewData }) {
               value={`${blocksToTime(durationBlocks)} (${durationBlocks.toLocaleString()} blocks)`}
             />
           )}
-          <ReviewRow label="Price Increment" value={data.auctionConfig.tickSpacing} />
+          <ReviewRow label="Tick Spacing" value={data.auctionConfig.tickSpacing} />
           <ReviewRow
             label="Fundraising Goal"
-            value={`${data.auctionConfig.requiredCurrencyRaised} ${data.auctionConfig.currency}`}
+            value={
+              data.auctionConfig.requiredCurrencyRaised
+                ? `${data.auctionConfig.requiredCurrencyRaised} ${data.auctionConfig.currency}`
+                : "None"
+            }
           />
           <ReviewRow
             label="Funds Recipient"
@@ -107,10 +115,8 @@ export function ReviewStep({ data }: { data: ReviewData }) {
         </Card.Header>
         <Card.Body pt="0">
           {data.releaseSchedule.map((seg, i) => {
-            const blockDeltaNum = parseInt(seg.blockDelta)
-            const humanTime = !isNaN(blockDeltaNum) && blockDeltaNum > 0
-              ? blocksToTime(blockDeltaNum)
-              : null
+            const delta = blockDeltas?.[i]
+            const humanTime = delta && delta > 0 ? blocksToTime(delta) : null
             return (
               <Flex key={i} justify="space-between" py="2" borderBottomWidth="1px">
                 <Text color="fg.muted" fontSize="sm">
@@ -119,7 +125,9 @@ export function ReviewStep({ data }: { data: ReviewData }) {
                 <HStack gap="4">
                   <Badge variant="outline">{seg.percentage}%</Badge>
                   <Text fontSize="sm" fontFamily="mono">
-                    {humanTime ?? seg.blockDelta}{humanTime ? ` (${seg.blockDelta} blocks)` : " blocks"}
+                    {delta && delta > 0
+                      ? `${humanTime} (${delta.toLocaleString()} blocks)`
+                      : "\u2014"}
                   </Text>
                 </HStack>
               </Flex>

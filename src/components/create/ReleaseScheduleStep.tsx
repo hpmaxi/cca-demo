@@ -13,12 +13,13 @@ import { blocksToTime } from "../../lib/format"
 
 export interface ScheduleSegment {
   percentage: string
-  blockDelta: string
 }
 
 interface Props {
   segments: ScheduleSegment[]
   onChange: (segments: ScheduleSegment[]) => void
+  /** Auction duration in blocks (endBlock - startBlock). Used to auto-calculate blockDelta. */
+  auctionDuration: number | null
 }
 
 const presets: { label: string; description: string; segments: ScheduleSegment[] }[] = [
@@ -26,55 +27,85 @@ const presets: { label: string; description: string; segments: ScheduleSegment[]
     label: "Linear",
     description: "Equal portions",
     segments: [
-      { percentage: "25", blockDelta: "12500" },
-      { percentage: "25", blockDelta: "12500" },
-      { percentage: "25", blockDelta: "12500" },
-      { percentage: "25", blockDelta: "12500" },
+      { percentage: "25" },
+      { percentage: "25" },
+      { percentage: "25" },
+      { percentage: "25" },
     ],
   },
   {
     label: "Back-loaded",
     description: "Most tokens later",
     segments: [
-      { percentage: "5", blockDelta: "5000" },
-      { percentage: "10", blockDelta: "10000" },
-      { percentage: "25", blockDelta: "15000" },
-      { percentage: "60", blockDelta: "20000" },
+      { percentage: "5" },
+      { percentage: "10" },
+      { percentage: "25" },
+      { percentage: "60" },
     ],
   },
   {
     label: "Front-loaded",
     description: "Most tokens early",
     segments: [
-      { percentage: "50", blockDelta: "10000" },
-      { percentage: "25", blockDelta: "10000" },
-      { percentage: "15", blockDelta: "15000" },
-      { percentage: "10", blockDelta: "15000" },
+      { percentage: "50" },
+      { percentage: "25" },
+      { percentage: "15" },
+      { percentage: "10" },
+    ],
+  },
+  {
+    label: "All at once",
+    description: "Single release",
+    segments: [
+      { percentage: "100" },
     ],
   },
 ]
 
-export function ReleaseScheduleStep({ segments, onChange }: Props) {
+/**
+ * Compute blockDelta for each segment proportionally from percentage.
+ * Adjusts the last segment so the total exactly equals auctionDuration.
+ */
+export function computeBlockDeltas(
+  segments: ScheduleSegment[],
+  auctionDuration: number,
+): number[] {
+  const totalPct = segments.reduce((s, seg) => s + (parseFloat(seg.percentage) || 0), 0)
+  if (totalPct === 0 || auctionDuration <= 0) return segments.map(() => 0)
+
+  const deltas = segments.map((seg) => {
+    const pct = parseFloat(seg.percentage) || 0
+    return Math.round((pct / totalPct) * auctionDuration)
+  })
+
+  // Fix rounding so sum equals exactly auctionDuration
+  const sum = deltas.reduce((a, b) => a + b, 0)
+  if (sum !== auctionDuration && deltas.length > 0) {
+    deltas[deltas.length - 1] += auctionDuration - sum
+  }
+
+  return deltas
+}
+
+export function ReleaseScheduleStep({ segments, onChange, auctionDuration }: Props) {
   const totalPct = segments.reduce(
     (sum, s) => sum + (parseFloat(s.percentage) || 0),
     0,
   )
 
+  const blockDeltas = auctionDuration ? computeBlockDeltas(segments, auctionDuration) : null
+
   const addSegment = () => {
-    onChange([...segments, { percentage: "", blockDelta: "" }])
+    onChange([...segments, { percentage: "" }])
   }
 
   const removeSegment = (index: number) => {
     onChange(segments.filter((_, i) => i !== index))
   }
 
-  const updateSegment = (
-    index: number,
-    field: keyof ScheduleSegment,
-    value: string,
-  ) => {
+  const updatePercentage = (index: number, value: string) => {
     const updated = segments.map((s, i) =>
-      i === index ? { ...s, [field]: value } : s,
+      i === index ? { ...s, percentage: value } : s,
     )
     onChange(updated)
   }
@@ -82,8 +113,21 @@ export function ReleaseScheduleStep({ segments, onChange }: Props) {
   return (
     <VStack gap="6" align="stretch">
       <Text fontSize="sm" color="fg.muted">
-        Choose how tokens are released after the auction. All at once or gradually.
+        Choose how tokens are released during the auction. Block durations are calculated
+        automatically from the auction length.
       </Text>
+
+      {!auctionDuration && (
+        <Box px="3" py="2" rounded="md" bg="orange.subtle" fontSize="xs" color="orange.fg">
+          Set start and end blocks in Auction Params first to see time calculations.
+        </Box>
+      )}
+
+      {auctionDuration && auctionDuration > 0 && (
+        <Box px="3" py="2" rounded="md" bg="blue.subtle" fontSize="xs" color="blue.fg" fontFamily="mono">
+          Auction duration: {auctionDuration.toLocaleString()} blocks ({blocksToTime(auctionDuration)})
+        </Box>
+      )}
 
       {/* Presets */}
       <Box>
@@ -111,10 +155,8 @@ export function ReleaseScheduleStep({ segments, onChange }: Props) {
         </Text>
         <VStack gap="3" align="stretch">
           {segments.map((seg, i) => {
-            const blockDeltaNum = parseInt(seg.blockDelta)
-            const humanTime = !isNaN(blockDeltaNum) && blockDeltaNum > 0
-              ? blocksToTime(blockDeltaNum)
-              : null
+            const delta = blockDeltas?.[i]
+            const humanTime = delta && delta > 0 ? blocksToTime(delta) : null
             return (
               <Flex key={i} gap="3" align="center">
                 <Text fontSize="sm" color="fg.muted" minW="6">
@@ -128,23 +170,27 @@ export function ReleaseScheduleStep({ segments, onChange }: Props) {
                     size="sm"
                     placeholder="%"
                     value={seg.percentage}
-                    onChange={(e) =>
-                      updateSegment(i, "percentage", e.target.value)
-                    }
+                    onChange={(e) => updatePercentage(i, e.target.value)}
                   />
                 </Box>
                 <Box flex="1">
                   <Text fontSize="xs" color="fg.muted" mb="1">
-                    Duration {humanTime && <Text as="span" fontSize="2xs">({humanTime})</Text>}
+                    Duration (auto)
                   </Text>
-                  <Input
-                    size="sm"
-                    placeholder="blocks"
-                    value={seg.blockDelta}
-                    onChange={(e) =>
-                      updateSegment(i, "blockDelta", e.target.value)
-                    }
-                  />
+                  <Flex
+                    align="center"
+                    h="8"
+                    px="3"
+                    rounded="md"
+                    bg="bg.muted"
+                    fontSize="sm"
+                    fontFamily="mono"
+                    color="fg.muted"
+                  >
+                    {delta && delta > 0
+                      ? `${delta.toLocaleString()} blocks${humanTime ? ` (${humanTime})` : ""}`
+                      : "—"}
+                  </Flex>
                 </Box>
                 <IconButton
                   aria-label="Remove segment"

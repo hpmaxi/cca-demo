@@ -1,9 +1,12 @@
+import { useState } from "react"
 import { Box, Button, Flex, Text } from "@chakra-ui/react"
-import { Bell, ChevronDown, Wallet } from "lucide-react"
-import { useAccount, useConnect, useDisconnect } from "wagmi"
+import { ChevronDown, Copy, Check, Wallet } from "lucide-react"
+import { useAccount, useConnect, useDisconnect, useChainId } from "wagmi"
 import { injected } from "wagmi/connectors"
+import { mainnet, sepolia, base } from "wagmi/chains"
 import { truncateAddress } from "../../lib/format"
 import { ColorModeButton } from "../ui/color-mode"
+import { anvilFork } from "../../wagmi"
 import {
   MenuRoot,
   MenuTrigger,
@@ -11,10 +14,32 @@ import {
   MenuItem,
 } from "../ui/menu"
 
+const chains = [anvilFork, sepolia, mainnet, base]
+
+const TESTNET_IDS: Set<number> = new Set([sepolia.id, anvilFork.id])
+
+function getChainInfo(chainId: number) {
+  const chain = chains.find((c) => c.id === chainId)
+  const name = chain?.name ?? `Chain ${chainId}`
+  const isTestnet = TESTNET_IDS.has(chainId)
+  return { name, isTestnet }
+}
+
 export function Topbar() {
   const { address, isConnected } = useAccount()
   const { connect } = useConnect()
   const { disconnect } = useDisconnect()
+  const chainId = useChainId()
+  const [copied, setCopied] = useState(false)
+
+  const { name: chainName, isTestnet } = getChainInfo(chainId)
+
+  const copyAddress = async () => {
+    if (!address) return
+    await navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <Flex
@@ -37,13 +62,23 @@ export function Topbar() {
       </Flex>
 
       <Flex align="center" gap="3">
-        {/* Chain Selector */}
-        <Button
-          variant="outline"
-          size="sm"
+        {/* Chain indicator */}
+        <Flex
+          align="center"
+          gap="2"
           display={{ base: "none", md: "flex" }}
           fontFamily="mono"
           fontSize="xs"
+          px="3"
+          py="1.5"
+          rounded="full"
+          borderWidth="1px"
+          borderColor={isTestnet ? "orange.300" : "border.muted"}
+          bg={isTestnet ? "orange.50" : "bg.muted/30"}
+          _dark={{
+            borderColor: isTestnet ? "orange.700" : "border.muted",
+            bg: isTestnet ? "orange.950" : "bg.muted/30",
+          }}
         >
           <Box
             w="2"
@@ -51,25 +86,21 @@ export function Topbar() {
             rounded="full"
             bg={isConnected ? "green.500" : "fg.subtle"}
           />
-          Base Mainnet
-          <ChevronDown size={12} style={{ opacity: 0.5 }} />
-        </Button>
-
-        {/* Notifications */}
-        <Button variant="ghost" size="sm" position="relative">
-          <Bell size={18} />
-          <Box
-            position="absolute"
-            top="1.5"
-            right="1.5"
-            w="2"
-            h="2"
-            rounded="full"
-            bg="red.500"
-            borderWidth="2px"
-            borderColor="bg"
-          />
-        </Button>
+          <Text fontWeight="medium">
+            {chainName}
+          </Text>
+          {isTestnet && (
+            <Text
+              fontSize="9px"
+              fontWeight="bold"
+              color="orange.600"
+              _dark={{ color: "orange.400" }}
+              textTransform="uppercase"
+            >
+              Testnet
+            </Text>
+          )}
+        </Flex>
 
         <ColorModeButton />
 
@@ -101,6 +132,10 @@ export function Topbar() {
               </Flex>
             </MenuTrigger>
             <MenuContent>
+              <MenuItem value="copy" onClick={copyAddress}>
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? "Copied!" : "Copy Address"}
+              </MenuItem>
               <MenuItem value="disconnect" onClick={() => disconnect()}>
                 Disconnect
               </MenuItem>
